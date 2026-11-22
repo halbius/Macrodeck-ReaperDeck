@@ -2,7 +2,7 @@
 
 Steuert REAPER direkt über dessen Web-Interface (HTTP). Keine Tastaturkürzel, REAPER muss nicht im Fokus sein.
 
-**Stand 0.12.1:** Action „Run REAPER command“ mit Button-Status, feste Actions (Item ruler), Setup-Dialog mit Verbindungstest, Web-API-Client.
+**Stand 0.18.1:** Action „Run REAPER command“ mit Button-Status, feste Actions (Item ruler), Setup-Dialog mit Verbindungstest, Web-API-Client.
 
 > Gebaut gegen `MacroDeck.Plugin.Hosting 3.0.0-beta.17`. Das SDK ist Preview und ändert sich noch. Der Code wurde gegen den SDK-Quellcode geschrieben, aber noch **nicht kompiliert** – erster Schritt ist `dotnet build`.
 
@@ -238,6 +238,16 @@ Drei Actions; beim Hinzufügen „Bereitgestellte Status verwenden“ bestätige
 - Leere Slots (weniger Treffer als Tasten) zeigen keine Beschriftung und tun nichts.
 - Nur Marker, keine Regionen. Der Filter gilt Plugin-weit (alle Folder) und ist nach einem Neustart des Plugins aufgehoben.
 - Technik: `MarkerMonitor` fragt alle 300 ms `MARKER;TRANSPORT` ab, solange Marker-Tasten angezeigt werden; Sprung per `SET/POS_STR/m<ID>`.
+
+
+### Regionen und Filtergruppen
+
+- **Regionen:** Die Marker-Actions zeigen auch Regionen. Beschriftung „<Name>“ + „M3“ / „R3“ (wie in REAPER). Eine Region ist „aktuell“, solange der Cursor in ihr steht; bei Markers + Regions können ein Marker und eine Region gleichzeitig leuchten. Sprung: `SET/POS_STR/m<ID>` bzw. `r<ID>` (Regionsanfang).
+- **Filtergruppen A–D:** je Gruppe ein Namensfilter („Marker filter“), ein Typ („Marker type“: Markers / Regions / Markers + Regions, nach dem Start *Markers*) und der Follow-Schalter für Next/Previous. Filtertasten haben *Filter group* (A–D), „Go to marker“ hat *Follow filter group* (None / A–D), Next/Previous *Filter group* (Markers/Regions/Both kommen immer aus der Gruppe) plus *Follow marker filter* (nur für den Namensfilter; *Switch* schaltet das pro Gruppe um).
+- **„Marker type“:** *Mode* = fester Typ (leuchtet, solange aktiv) oder *Switch* (jeder Druck: Markers → Regions → Both; Beschriftung = aktueller Typ). Auf einzelne Tasten oder auf Short/Long/Double Press legbar.
+- **Nummern bei „Go to marker“:** ein Typ ohne Namensfilter: echte ID (M3 bzw. R3); *Markers + Regions* oder Namensfilter: n-ter Eintrag der Liste in Zeitreihenfolge.
+- **Ältere Tasten:** „Follow marker filter“ an = Gruppe A; Filtertasten und Next/Previous ohne Gruppe = A.
+- Regionen ohne eigene Farbe: Theme-Farbe `region` (`ReaperControl_ThemeColors.lua`), sonst `#508585` (REAPER-Standard).
 
 ## Widget „REAPER timecode“
 

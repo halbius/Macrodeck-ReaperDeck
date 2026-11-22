@@ -4,70 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ReaperControl.Reaper;
 
-/// <summary>Markers of the current project (no regions) and the play/edit cursor position.</summary>
-/// <param name="Markers">Sorted by position.</param>
-/// <param name="Position">Play position while playing, edit cursor otherwise (seconds).</param>
-/// <param name="CurrentMarkerId">The last marker at or before <paramref name="Position" />, if any.</param>
-public sealed record MarkerSnapshot(IReadOnlyList<ReaperMarker> Markers, double Position, int? CurrentMarkerId)
-{
-    /// <summary>Tolerance for "the cursor stands exactly on a marker" (float positions).</summary>
-    public const double Tolerance = 0.0005;
-
-    /// <summary>First marker right of the cursor (matching <paramref name="filter" /> if given).</summary>
-    public ReaperMarker? Next(MarkerFilter? filter) =>
-        Markers.FirstOrDefault(m => m.Start > Position + Tolerance && (filter is null || filter.Matches(m)));
-
-    /// <summary>Last marker left of the cursor; a marker exactly at the cursor does not count.</summary>
-    public ReaperMarker? Previous(MarkerFilter? filter) =>
-        Markers.LastOrDefault(m => m.Start < Position - Tolerance && (filter is null || filter.Matches(m)));
-}
-
-/// <summary>How a filter text is compared with marker names (case-insensitive).</summary>
-public enum MarkerMatch
-{
-    Contains,
-    StartsWith
-}
-
-public sealed record MarkerFilter(string Text, MarkerMatch Match)
-{
-    public bool Matches(ReaperMarker marker) => Match == MarkerMatch.StartsWith
-        ? marker.Name.StartsWith(Text, StringComparison.OrdinalIgnoreCase)
-        : marker.Name.Contains(Text, StringComparison.OrdinalIgnoreCase);
-}
-
-/// <summary>The marker filter that the filter buttons set and the marker buttons follow (one, shared).</summary>
-public sealed class MarkerFilterState
-{
-    private volatile bool _navigationFollowsFilter;
-
-    /// <summary>
-    /// Shared switch for "Go to next / previous marker" buttons set to "Follow toggle button":
-    /// toggled by the "Marker navigation: follow filter" action.
-    /// </summary>
-    public bool NavigationFollowsFilter => _navigationFollowsFilter;
-
-    public bool ToggleNavigationFollowsFilter() => _navigationFollowsFilter = !_navigationFollowsFilter;
-
-    private MarkerFilter? _current;
-
-    public MarkerFilter? Current => Volatile.Read(ref _current);
-
-    /// <summary>Activates <paramref name="filter" />, or clears it if it is already active. Returns the new filter.</summary>
-    public MarkerFilter? Toggle(MarkerFilter filter)
-    {
-        while (true)
-        {
-            var current = Current;
-            var next = filter.Equals(current) ? null : filter;
-            if (Interlocked.CompareExchange(ref _current, next, current) == current)
-            {
-                return next;
-            }
-        }
-    }
-}
-
 /// <summary>
 /// Polls REAPER's marker list and cursor position in the background while marker buttons are shown,
 /// and tells Macro Deck to re-read those buttons when a marker or the current marker changes.
@@ -75,6 +11,7 @@ public sealed class MarkerFilterState
 public sealed class MarkerMonitor(
     ReaperConnection connection,
     IPluginCatalogNotifier notifier,
+    MarkerFilterState filters,
     ILogger<MarkerMonitor> logger) : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(300);
@@ -94,14 +31,25 @@ public sealed class MarkerMonitor(
     // plugin started - not continuously: themes rarely change.
     public const string ThemeColorsScript = "ReaperControl_ThemeColors.lua";
     private const string FallbackMarkerColor = "#a00000"; // REAPER's default marker red
+    private const string FallbackRegionColor = "#508585"; // REAPER's default region color
     private static readonly TimeSpan ThemeScriptRetry = TimeSpan.FromSeconds(30);
     private readonly ExtStateValue _themeMarkerColor = new("ReaperControl", "ThemeMarkerColor");
+    private readonly ExtStateValue _themeRegionColor = new("ReaperControl", "ThemeRegionColor");
     private string? _themeColor;
+    private string? _themeRegion;
     private long _themeScriptStarted = -ThemeScriptRetry.Ticks;
     private bool _warnedThemeScript;
 
     /// <summary>"#rrggbb" for markers without their own color: the theme's, else REAPER's default red.</summary>
     public string DefaultMarkerColor => Volatile.Read(ref _themeColor) ?? FallbackMarkerColor;
+
+    /// <summary>"#rrggbb" for regions without their own color: the theme's, else REAPER's default.</summary>
+    public string DefaultRegionColor => Volatile.Read(ref _themeRegion) ?? FallbackRegionColor;
+
+    /// <summary>The color a marker or region is drawn in: its own, else the theme default.</summary>
+    public string ColorOf(ReaperMarker m) =>
+        (m.Color is { } c && c != 0 ? $"#{c & 0xFFFFFF:x6}" : null)
+        ?? (m.IsRegion ? DefaultRegionColor : DefaultMarkerColor);
 
     /// <summary>The last known markers, and keep polling them. Null until the first answer.</summary>
     public MarkerSnapshot? Get()
@@ -158,11 +106,17 @@ public sealed class MarkerMonitor(
     /// <summary>Reads the theme marker color from the reply; starts the script once if it is missing.</summary>
     private async Task UpdateThemeColorAsync(ReaperWebClient client, string reply, CancellationToken cancellationToken)
     {
-        var raw = ReaperResponseParser.ParseStates(reply, [_themeMarkerColor])
-            .GetValueOrDefault(_themeMarkerColor.Key, "");
+        var states = ReaperResponseParser.ParseStates(reply, [_themeMarkerColor, _themeRegionColor]);
+        var raw = states.GetValueOrDefault(_themeMarkerColor.Key, "");
         if (raw.Length == 7 && raw[0] == '#')
         {
             Volatile.Write(ref _themeColor, raw.ToLowerInvariant());
+            var region = states.GetValueOrDefault(_themeRegionColor.Key, "");
+            if (region.Length == 7 && region[0] == '#')
+            {
+                Volatile.Write(ref _themeRegion, region.ToLowerInvariant());
+            }
+
             return;
         }
 
@@ -190,6 +144,9 @@ public sealed class MarkerMonitor(
         await client.SendEncodedAsync([Uri.EscapeDataString(commandId)], cancellationToken);
     }
 
+    /// <summary>"M3" / "R3", as REAPER labels markers and regions.</summary>
+    public static string Key(ReaperMarker? m) => m is null ? "-" : (m.IsRegion ? "R" : "M") + m.Id;
+
     private async Task PollOnceAsync(CancellationToken cancellationToken)
     {
         var client = connection.Client;
@@ -201,7 +158,7 @@ public sealed class MarkerMonitor(
         string reply;
         try
         {
-            reply = await client.SendAsync(["MARKER", "TRANSPORT", _themeMarkerColor.Request], cancellationToken);
+            reply = await client.SendAsync(["MARKER", "REGION", "TRANSPORT", _themeMarkerColor.Request, _themeRegionColor.Request], cancellationToken);
             if (!_reachable)
             {
                 _reachable = true;
@@ -222,26 +179,28 @@ public sealed class MarkerMonitor(
 
         await UpdateThemeColorAsync(client, reply, cancellationToken);
 
-        var markers = ReaperResponseParser.ParseMarkers(reply)
-            .Where(m => !m.IsRegion)
+        var items = ReaperResponseParser.ParseMarkers(reply)
             .OrderBy(m => m.Start)
+            .ThenBy(m => m.IsRegion) // a marker before a region starting at the same place
             .ThenBy(m => m.Id)
             .ToList();
         var position = ReaperResponseParser.ParseTransport(reply)?.PositionSeconds ?? 0;
-        var current = markers.LastOrDefault(m => m.Start <= position + PositionTolerance)?.Id;
+        var snapshot = new MarkerSnapshot(items, position);
+        Volatile.Write(ref _snapshot, snapshot);
 
-        Volatile.Write(ref _snapshot, new MarkerSnapshot(markers, position, current));
-
-        // Only what buttons show: names, ids, order and the current marker - not every cursor move.
-        var snapshotNow = new MarkerSnapshot(markers, position, current);
-        var signature = string.Join('\u0001', markers.Select(m => $"{m.Id}\u0002{m.Name}\u0002{m.Color}"))
-                        + "\u0003" + current
-                        + "\u0003" + DefaultMarkerColor
-                        + "\u0003" + snapshotNow.Previous(null)?.Id + "/" + snapshotNow.Next(null)?.Id;
+        // Only what buttons show: names, ids, colors, what is current, and next/previous for every view
+        // a button can follow - not every cursor move.
+        var views = new[] { MarkerView.Plain }.Concat(filters.Groups.Select(g => g.View));
+        var signature = string.Join('\u0001', items.Select(m =>
+                            $"{(m.IsRegion ? 'R' : 'M')}{m.Id}\u0002{m.Name}\u0002{m.Color}\u0002{snapshot.IsCurrent(m)}"))
+                        + "\u0003" + string.Join(",", views.Select(v =>
+                            $"{Key(snapshot.Previous(v))}/{Key(snapshot.Next(v))}"))
+                        + "\u0003" + DefaultMarkerColor + DefaultRegionColor;
+        var markers = items;
         if (signature != _signature)
         {
-            logger.LogInformation("REAPER markers: {Count} markers (IDs {Ids}), current {Current}",
-                markers.Count, string.Join(", ", markers.Select(m => m.Id)), current?.ToString() ?? "none");
+            logger.LogInformation("REAPER markers: {Count} markers/regions ({Ids}), current marker {Current}",
+                markers.Count, string.Join(", ", markers.Select(Key)), snapshot.CurrentMarkerId?.ToString() ?? "none");
             if (markers.Count == 0)
             {
                 // Shows what REAPER actually answered, in case the format is not what the parser expects.

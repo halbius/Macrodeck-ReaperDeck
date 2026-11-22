@@ -7,13 +7,17 @@ using ReaperControl.Reaper;
 namespace ReaperControl.Actions;
 
 /// <summary>
-/// "Go to next / previous marker": jumps to the marker right (next) or left (previous) of the
-/// play/edit cursor. The label shows the direction and that marker's name, and follows the cursor.
+/// "Go to next / previous marker": jumps to the marker (or region) right (next) or left (previous) of
+/// the play/edit cursor. The label shows the direction and its name, and follows the cursor.
 /// </summary>
+/// <remarks>
+/// The button's filter group always decides the kind (markers / regions / both, set by "Marker type").
+/// "Follow marker filter" decides only about the group's name filter ("Marker filter").
+/// </remarks>
 public sealed class NextPreviousMarkerAction(
     ReaperConnection connection,
     MarkerMonitor markers,
-    MarkerFilterState filter,
+    MarkerFilterState filters,
     ILogger<NextPreviousMarkerAction> logger)
     : IActionDefinition, IStateProviderActionDefinition, IIconProviderActionDefinition
 {
@@ -44,21 +48,24 @@ public sealed class NextPreviousMarkerAction(
                 new ActionParameterOption
                 {
                     Value = ToggleDirection,
-                    Label = "Switch \"Follow filter\" for next/previous buttons"
+                    Label = "Switch: next/previous buttons follow the name filter on/off"
                 }
             ],
             "Direction", defaultValue: "next", required: true),
         ActionParameter.Choice(FilterModeParameter,
             [
-                new ActionParameterOption { Value = "toggle", Label = "Follow the switch button" },
-                new ActionParameterOption { Value = "always", Label = "Always follow the marker filter" },
-                new ActionParameterOption { Value = "never", Label = "Never (all markers)" }
+                new ActionParameterOption { Value = "toggle", Label = "As the switch button says" },
+                new ActionParameterOption { Value = "always", Label = "Always follow the name filter" },
+                new ActionParameterOption { Value = "never", Label = "Never (ignore the name filter)" }
             ],
             "Follow marker filter",
-            "Whether a press skips markers that do not match the active marker filter.",
+            "Whether a press skips entries that do not match the group's name filter. Markers / regions / both always come from the group.",
             defaultValue: "toggle").OnlyWhen(DirectionParameter, "next", "previous"),
+        // Default A: buttons from before filter groups followed the one filter, now group A.
+        MarkerGroupParameter.ForFilters("The filter group this button follows, and whose switch the switch button toggles."),
         ActionParameter.Toggle(UseColorParameter, "Use marker color",
-            "Button in the color of the marker it jumps to.", defaultValue: true)
+            "Button in the color of the marker or region it jumps to (without a color of its own: REAPER's theme color).",
+            defaultValue: true)
             .OnlyWhen(DirectionParameter, "next", "previous")
     ];
 
@@ -88,14 +95,10 @@ public sealed class NextPreviousMarkerAction(
         }
         else
         {
-            var markerText = string.IsNullOrWhiteSpace(marker.Name)
-                ? $"ID: {marker.Id.ToString(CultureInfo.InvariantCulture)}"
-                : marker.Name;
+            var markerText = string.IsNullOrWhiteSpace(marker.Name) ? MarkerMonitor.Key(marker) : marker.Name;
             label = $"{heading}\n{markerText}";
-            // Markers without a color of their own: the color REAPER draws them in (theme, else red).
-            color = UsesMarkerColor(parameters)
-                ? MarkerColors.ToHex(marker.Color) ?? markers.DefaultMarkerColor
-                : null;
+            // Without a color of its own: the color REAPER draws it in (theme, else red).
+            color = UsesMarkerColor(parameters) ? markers.ColorOf(marker) : null;
         }
 
         var background = color ?? "#2d3748";
@@ -125,7 +128,8 @@ public sealed class NextPreviousMarkerAction(
             return Task.FromResult<ActionIconSnapshot?>(null);
         }
 
-        var filtered = FollowsFilter(parameters) && filter.Current is not null;
+        // The badge: a name filter is active for this button.
+        var filtered = ViewOf(parameters).Filter is not null;
         return Task.FromResult(filtered
             ? IconLibrary.Snapshot("filter-badge", dimmed: false)
             : new ActionIconSnapshot { NoIcon = true });
@@ -139,14 +143,23 @@ public sealed class NextPreviousMarkerAction(
 
     private ReaperMarker? Target<T>(MarkerSnapshot snapshot, bool next, IReadOnlyDictionary<string, T> parameters)
     {
-        var activeFilter = FollowsFilter(parameters) ? filter.Current : null;
-        return next ? snapshot.Next(activeFilter) : snapshot.Previous(activeFilter);
+        var view = ViewOf(parameters);
+        return next ? snapshot.Next(view) : snapshot.Previous(view);
+    }
+
+    private MarkerFilterGroup GroupOf<T>(IReadOnlyDictionary<string, T> parameters) =>
+        filters.Group(MarkerGroupParameter.Read(parameters, "A")) ?? filters.A;
+
+    /// <summary>The group's kind, and its name filter while following it.</summary>
+    private MarkerView ViewOf<T>(IReadOnlyDictionary<string, T> parameters)
+    {
+        var group = GroupOf(parameters);
+        return new MarkerView(group.Kind, FollowsFilter(parameters) ? group.Current : null);
     }
 
     private static bool IsNext<T>(IReadOnlyDictionary<string, T> parameters) =>
         Values.Get(parameters, DirectionParameter) != "previous";
 
-    private MarkerFilterState Filter => filter;
 
     private static bool IsToggle<T>(IReadOnlyDictionary<string, T> parameters) =>
         Values.Get(parameters, DirectionParameter) == ToggleDirection;
@@ -156,7 +169,7 @@ public sealed class NextPreviousMarkerAction(
         {
             "always" => true,
             "never" => false,
-            "toggle" => filter.NavigationFollowsFilter,
+            "toggle" => GroupOf(parameters).NavigationFollowsFilter,
             // Buttons from before this setting: the old on/off switch.
             _ => string.Equals(Values.Get(parameters, FollowFilterParameter), "true", StringComparison.OrdinalIgnoreCase)
         };
@@ -175,7 +188,7 @@ public sealed class NextPreviousMarkerAction(
         {
             if (IsToggle(context.Parameters))
             {
-                action.Filter.ToggleNavigationFollowsFilter();
+                action.GroupOf(context.Parameters).ToggleNavigationFollowsFilter();
                 markers.NotifyButtonsChanged(); // next/previous buttons show other markers now
                 return ActionResult.Success();
             }
@@ -196,7 +209,7 @@ public sealed class NextPreviousMarkerAction(
 
             try
             {
-                await client.SendAsync([$"SET/POS_STR/m{marker.Id}"], context.CancellationToken);
+                await client.SendAsync([$"SET/POS_STR/{MarkerButtonAction.PositionOf(marker)}"], context.CancellationToken);
                 markers.RequestRefresh();
                 return ActionResult.Success();
             }
@@ -210,7 +223,7 @@ public sealed class NextPreviousMarkerAction(
             }
             catch (HttpRequestException ex)
             {
-                logger.LogWarning(ex, "Jumping to marker {Id} failed", marker.Id);
+                logger.LogWarning(ex, "Jumping to {Marker} failed", MarkerMonitor.Key(marker));
                 return ActionResult.Failed(ActionErrorCodes.NotConnected,
                     "REAPER is not reachable. Is it running with the web interface enabled?");
             }
