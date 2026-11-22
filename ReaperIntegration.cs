@@ -49,6 +49,7 @@ public sealed class ReaperIntegration : IPluginIntegration, IConfigFlowProvider,
         var markerLogger = loggerFactory.CreateLogger<MarkerButtonAction>();
         Actions =
         [
+	        new InsertAction(connection, stateMonitor, loggerFactory.CreateLogger<InsertAction>()),
             new ItemAction(connection, stateMonitor, loggerFactory.CreateLogger<ItemAction>()),
             new ItemEditorAction(connection, stateMonitor, loggerFactory.CreateLogger<ItemEditorAction>()),
             new LoadRenderPresetAction(connection, loggerFactory.CreateLogger<LoadRenderPresetAction>()),
