@@ -53,7 +53,7 @@ public static class TimecodeWidget
     /// <param name="ScriptMode">REAPER time format mode the script supplies; null = no script needed.</param>
     private sealed record Format(string Key, string Name, int? ScriptMode, string Sample);
 
-    // To add a format: one line here (and the mode in ReaperControl_Timecode.lua / TimecodeMonitor.ScriptModes).
+    // To add a format: one line here (and the mode in ReaperDeck_Timecode.lua / TimecodeMonitor.ScriptModes).
     private static readonly IReadOnlyList<Format> Formats =
     [
         new("transport", "Like transport window", null, "1.1.00"),
@@ -218,7 +218,7 @@ public static class TimecodeWidget
                         Key = FormatKey,
                         Label = "Format",
                         Description = "Formats other than \"Like transport window\", \"Measures.Beats\", " +
-                                      "\"Minutes:Seconds\" and \"Seconds\" need ReaperControl_Timecode.lua running in REAPER.",
+                                      "\"Minutes:Seconds\" and \"Seconds\" need ReaperDeck_Timecode.lua running in REAPER.",
                         Binding = Bind.To(format),
                         Options = UiValue.Of<IReadOnlyList<UiOption>>([.. Formats.Select(f => UiOption.Of(f.Key, f.Name))])
                     },
@@ -226,7 +226,7 @@ public static class TimecodeWidget
                     {
                         Key = ShowPlayRateKey,
                         Label = "Show playback rate",
-                        Description = "Needs ReaperControl_Timecode.lua running in REAPER.",
+                        Description = "Needs ReaperDeck_Timecode.lua running in REAPER.",
                         Binding = Bind.To(showPlayRate)
                     },
                     new UiBooleanInput
@@ -293,7 +293,7 @@ public static class TimecodeWidget
             _ => null
         };
         return main is null
-            ? new TileText("--", "needs ReaperControl_Timecode.lua", snapshot.PlayState)
+            ? new TileText("--", "needs ReaperDeck_Timecode.lua", snapshot.PlayState)
             : new TileText(main, Info(options, snapshot), snapshot.PlayState);
     }
 

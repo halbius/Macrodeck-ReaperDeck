@@ -114,7 +114,7 @@ public ValueTask<VariableWriteResult> SetValueAsync(
 
     // ----- Widget types (the "REAPER timecode" tile) -----
 
-    public string ProviderName => "REAPER Control";
+    public string ProviderName => "ReaperDeck";
 
     public Task InitializeAsync(IWidgetTypeProviderContext context, CancellationToken cancellationToken = default) =>
         context.RegisterWidgetTypeAsync(TimecodeWidget.Descriptor, cancellationToken);

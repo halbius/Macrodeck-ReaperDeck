@@ -123,8 +123,8 @@ public sealed class MarkerButtonAction(
     private const string RegionModeParameter = "regionMode";
     private const string EmptyStateId = "marker-empty";
 
-    /// <summary>Does the setting on the cursor; see ReaperScripts/ReaperControl_SetMarker.lua.</summary>
-    public const string SetScriptFileName = "ReaperControl_SetMarker.lua";
+    /// <summary>Does the setting on the cursor; see ReaperScripts/ReaperDeck_SetMarker.lua.</summary>
+    public const string SetScriptFileName = "ReaperDeck_SetMarker.lua";
 
     public string Id => ActionId;
 
@@ -281,7 +281,7 @@ public sealed class MarkerButtonAction(
         (marker.IsRegion ? "r" : "m") + marker.Id.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// "Set": hands the job to ReaperControl_SetMarker.lua in one request (ExtState "MarkerSet", then the
+    /// "Set": hands the job to ReaperDeck_SetMarker.lua in one request (ExtState "MarkerSet", then the
     /// script): move this marker/region to the cursor, or create one - with the button's number as ID
     /// when the view uses IDs, named after the name filter if one is active. One undo step.
     /// </summary>
@@ -366,7 +366,7 @@ public sealed class MarkerButtonAction(
             {
                 return ActionResult.Failed(ActionErrorCodes.NotFound,
                     $"{SetScriptFileName} is not in REAPER's action list: install the scripts and run " +
-                    "ReaperControl_Setup.lua once.");
+                    "ReaperDeck_Setup.lua once.");
             }
 
             try

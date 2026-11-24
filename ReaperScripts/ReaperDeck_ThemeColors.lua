@@ -1,7 +1,7 @@
--- ReaperControl_ThemeColors.lua
+-- ReaperDeck_ThemeColors.lua
 --
 -- Publishes the colors REAPER draws markers and regions without a color of their own in (from the
--- current theme) for the Macro Deck plugin "REAPER Control" (marker buttons with "Use marker color").
+-- current theme) for the Macro Deck plugin "ReaperDeck" (marker buttons with "Use marker color").
 -- Runs once and ends; the plugin starts it when the values are missing (after REAPER or the plugin
 -- started). Run it by hand after switching the theme.
 --

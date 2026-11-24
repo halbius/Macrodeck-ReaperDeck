@@ -13,11 +13,11 @@ namespace ReaperControl.Reaper;
 /// <item>Value: the loudest selected track/item in dB (-60 … +12, 0.1 steps; -60 = -inf). Nothing
 /// selected: unavailable, the fader is inactive.</item>
 /// <item>Moving the fader sets the loudest one to the fader value and moves all other selected ones by
-/// the same amount (trim). The scripts ReaperControl_TrackState.lua / ReaperControl_ItemState.lua do
+/// the same amount (trim). The scripts ReaperDeck_TrackState.lua / ReaperDeck_ItemState.lua do
 /// that ("&lt;Kind&gt;VolumeSet" = "&lt;seq&gt;|&lt;dB&gt;"); they publish the value as "&lt;Kind&gt;Volume".</item>
 /// <item>One undo step per fader movement: <see cref="CommitDelay" /> after the last value the plugin
 /// sends "&lt;Kind&gt;VolumeCommit", and the script then adds the undo point.</item>
-/// <item>"Follows context" uses ReaperControl_Context.lua (tracks / items; envelopes: unavailable).</item>
+/// <item>"Follows context" uses ReaperDeck_Context.lua (tracks / items; envelopes: unavailable).</item>
 /// </list>
 /// </remarks>
 public sealed class VolumeVariables(

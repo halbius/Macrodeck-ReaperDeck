@@ -27,9 +27,9 @@ public sealed class MarkerMonitor(
     private bool _reachable = true;
 
     // Color REAPER draws markers without a color of their own in (from the theme), published by
-    // ReaperControl_ThemeColors.lua. That script runs once when it is missing - after REAPER or the
+    // ReaperDeck_ThemeColors.lua. That script runs once when it is missing - after REAPER or the
     // plugin started - not continuously: themes rarely change.
-    public const string ThemeColorsScript = "ReaperControl_ThemeColors.lua";
+    public const string ThemeColorsScript = "ReaperDeck_ThemeColors.lua";
     private const string FallbackMarkerColor = "#a00000"; // REAPER's default marker red
     private const string FallbackRegionColor = "#508585"; // REAPER's default region color
     private static readonly TimeSpan ThemeScriptRetry = TimeSpan.FromSeconds(30);
@@ -134,7 +134,7 @@ public sealed class MarkerMonitor(
             {
                 _warnedThemeScript = true;
                 logger.LogWarning("{Script} is not in REAPER's action list - markers without a color use {Color}. " +
-                                  "Install the scripts and run ReaperControl_Setup.lua once.",
+                                  "Install the scripts and run ReaperDeck_Setup.lua once.",
                     ThemeColorsScript, FallbackMarkerColor);
             }
 

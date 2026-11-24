@@ -1,0 +1,20 @@
+# Publishes ReaperDeck to the Macro Deck Store when a GitHub release is published.
+# The version comes from the release tag (v1.0.0 -> 1.0.0), not from manifest.json.
+# Needs: a Project in the Macro Deck Creator Portal with Package ID "de.christianalpen.reaperdeck",
+# connected to this repository. No secrets or signing keys - the Creator Portal signs after review.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    uses: Macro-Deck-App/GitHub-Actions/.github/workflows/publish-plugin.yml@v1
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      version: ${{ github.event.release.tag_name }}
+      source: .
+      changelog: ${{ github.event.release.body }}

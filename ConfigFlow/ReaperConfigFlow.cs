@@ -122,7 +122,7 @@ internal sealed class ReaperConfigFlow : IConfigFlow
             ActionParameter.Toggle(InstallScriptsField, "Install/update REAPER scripts",
                 "Copies the plugin's Lua scripts to Scripts/" + ReaperScriptFiles.InstallFolder +
                 " in the resource path when you save. Needs the resource path. Then run " +
-                "ReaperControl_Setup.lua once in REAPER (Actions → Load ReaScript).",
+                "ReaperDeck_Setup.lua once in REAPER (Actions → Load ReaScript).",
                 defaultValue: false),
         ]
     };

@@ -11,7 +11,7 @@ namespace ReaperControl.Actions;
 /// </summary>
 /// <remarks>
 /// REAPER has no action or API call for render presets. So the plugin writes the preset name to
-/// ExtState "ReaperControl"/"RenderPreset" and runs ReaperScripts/ReaperControl_LoadRenderPreset.lua
+/// ExtState "ReaperControl"/"RenderPreset" and runs ReaperScripts/ReaperDeck_LoadRenderPreset.lua
 /// in the same request; that script applies the preset (via cfillion's "Apply render preset") and
 /// opens the render dialog. The script's command id is looked up in reaper-kb.ini by file name.
 /// </remarks>
@@ -21,7 +21,7 @@ public sealed class LoadRenderPresetAction(ReaperConnection connection, ILogger<
     // Persisted in users' profiles - never rename after release.
     public const string ActionId = "load-render-preset";
 
-    public const string ScriptFileName = "ReaperControl_LoadRenderPreset.lua";
+    public const string ScriptFileName = "ReaperDeck_LoadRenderPreset.lua";
 
     private const string PresetParameter = "preset";
 

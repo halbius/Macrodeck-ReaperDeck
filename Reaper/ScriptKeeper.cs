@@ -21,7 +21,7 @@ namespace ReaperControl.Reaper;
 /// <see cref="RetryAfter" />, so REAPER never gets a second start of a script that is just starting
 /// (that would ask "terminate / new instance?").</item>
 /// </list>
-/// The scripts must be in REAPER's action list once (ReaperControl_Setup.lua does that).
+/// The scripts must be in REAPER's action list once (ReaperDeck_Setup.lua does that).
 /// </remarks>
 public sealed class ScriptKeeper(ReaperConnection connection, ILogger<ScriptKeeper> logger) : BackgroundService
 {
@@ -117,7 +117,7 @@ public sealed class ScriptKeeper(ReaperConnection connection, ILogger<ScriptKeep
                 {
                     logger.LogWarning(
                         "{Script} is not in REAPER's action list, so the plugin cannot start it. Install the " +
-                        "scripts (plugin settings) and run ReaperControl_Setup.lua once in REAPER.",
+                        "scripts (plugin settings) and run ReaperDeck_Setup.lua once in REAPER.",
                         script.FileName);
                 }
 

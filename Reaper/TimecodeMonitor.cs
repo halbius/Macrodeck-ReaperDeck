@@ -10,11 +10,11 @@ namespace ReaperControl.Reaper;
 /// <param name="TransportFormat">As REAPER's transport window shows it (from TRANSPORT).</param>
 /// <param name="Beats">Measures.beats (from TRANSPORT).</param>
 /// <param name="Seconds">Position in seconds.</param>
-/// <param name="ScriptFormats">Formatted by ReaperControl_Timecode.lua, keyed by REAPER's time format
+/// <param name="ScriptFormats">Formatted by ReaperDeck_Timecode.lua, keyed by REAPER's time format
 /// mode (0 time, 1 measures.beats + time, 2 measures.beats, 3 seconds, 4 samples, 5 h:m:s:f, 8 frames).
 /// Empty while the script is not running.</param>
 /// <param name="PlayState">0 stopped, 1 playing, 2 paused, 5 recording, 6 record-paused.</param>
-/// <param name="PlayRate">Playback rate as ReaperControl_Timecode.lua publishes it ("1.00"); empty
+/// <param name="PlayRate">Playback rate as ReaperDeck_Timecode.lua publishes it ("1.00"); empty
 /// while the script is not running.</param>
 /// <param name="RecordMode">"normal", "time" (time selection auto-punch), "item" (selected item
 /// auto-punch) or empty when unknown.</param>
@@ -109,7 +109,7 @@ public sealed class TimecodeMonitor(ReaperConnection connection, ScriptKeeper sc
             return;
         }
 
-        // Formats beyond the transport ones and the playback rate come from ReaperControl_Timecode.lua.
+        // Formats beyond the transport ones and the playback rate come from ReaperDeck_Timecode.lua.
         scripts.NeedKey(ExtStateKey);
 
         TimecodeSnapshot? next;

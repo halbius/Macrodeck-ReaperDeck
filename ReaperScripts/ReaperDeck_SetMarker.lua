@@ -1,6 +1,6 @@
--- ReaperControl_SetMarker.lua
+-- ReaperDeck_SetMarker.lua
 --
--- "Set to cursor" of the Macro Deck plugin "REAPER Control" (action "Go to marker", On press = Set).
+-- "Set to cursor" of the Macro Deck plugin "ReaperDeck" (action "Go to marker", On press = Set).
 -- Runs once per press; the plugin first writes the job to ExtState "ReaperControl" / "MarkerSet":
 --
 --   kind \t id \t new id \t region mode \t edit \t name
@@ -29,7 +29,7 @@ local edit = f[5] == "1"
 local newName = f[6] or ""
 
 local function message(text)
-  reaper.ShowMessageBox(text, "REAPER Control", 0)
+  reaper.ShowMessageBox(text, "ReaperDeck", 0)
 end
 
 local cursor = reaper.GetPlayState() ~= 0 and reaper.GetPlayPosition() or reaper.GetCursorPosition()

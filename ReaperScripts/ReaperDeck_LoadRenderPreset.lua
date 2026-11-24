@@ -1,6 +1,6 @@
--- ReaperControl_LoadRenderPreset.lua
+-- ReaperDeck_LoadRenderPreset.lua
 --
--- Called by the Macro Deck plugin "REAPER Control" (action "Load render preset"):
+-- Called by the Macro Deck plugin "ReaperDeck" (action "Load render preset"):
 -- applies the render preset named in ExtState "ReaperControl"/"RenderPreset" and opens the
 -- render dialog. Does not start rendering.
 --
@@ -21,7 +21,7 @@ local SECTION, KEY = "ReaperControl", "RenderPreset"
 
 local presetName = reaper.GetExtState(SECTION, KEY)
 if presetName == "" then
-  reaper.ShowMessageBox("No render preset name was passed.", "REAPER Control", 0)
+  reaper.ShowMessageBox("No render preset name was passed.", "ReaperDeck", 0)
   return
 end
 
@@ -31,7 +31,7 @@ if not reaper.file_exists(scriptPath) then
     "cfillion's \"Apply render preset\" script was not found:\n" .. scriptPath ..
     "\n\nInstall it via Extensions > ReaPack > Browse packages, or adjust APPLY_PRESET_SCRIPT in\n" ..
     debug.getinfo(1, "S").source:sub(2),
-    "REAPER Control", 0)
+    "ReaperDeck", 0)
   return
 end
 

@@ -11,7 +11,7 @@ namespace ReaperControl.Reaper;
 /// </summary>
 /// <remarks>
 /// Runs only while at least one trigger is bound to the event (the host tells the plugin its bindings),
-/// so without such a trigger neither this monitor polls nor ReaperControl_Context.lua runs. The value
+/// so without such a trigger neither this monitor polls nor ReaperDeck_Context.lua runs. The value
 /// has to stay the same for <see cref="Settle" /> before the event fires, so quick clicks back and forth
 /// do not make the deck jump.
 /// </remarks>
@@ -101,7 +101,7 @@ public sealed class ContextMonitor(
             return;
         }
 
-        scripts.NeedKey(_source.Name); // keeps ReaperControl_Context.lua running
+        scripts.NeedKey(_source.Name); // keeps ReaperDeck_Context.lua running
 
         var reply = await client.SendAsync([_source.Request], cancellationToken);
         var value = ReaperResponseParser.ParseStates(reply, [_source]).GetValueOrDefault(_source.Key, "");

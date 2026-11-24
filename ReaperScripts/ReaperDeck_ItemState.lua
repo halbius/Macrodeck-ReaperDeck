@@ -1,6 +1,6 @@
--- ReaperControl_ItemState.lua
+-- ReaperDeck_ItemState.lua
 --
--- Publishes settings of the selected items for the Macro Deck plugin "REAPER Control"
+-- Publishes settings of the selected items for the Macro Deck plugin "ReaperDeck"
 -- (actions "Item ruler" and "Item"). Runs in the background (defer loop) until REAPER closes or the
 -- script is stopped.
 --

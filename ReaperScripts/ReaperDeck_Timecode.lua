@@ -1,7 +1,7 @@
--- ReaperControl_Timecode.lua
+-- ReaperDeck_Timecode.lua
 --
 -- Publishes the play/edit cursor position in all of REAPER's time formats for the Macro Deck plugin
--- "REAPER Control" (widget "REAPER timecode"). Runs in the background (defer loop).
+-- "ReaperDeck" (widget "REAPER timecode"). Runs in the background (defer loop).
 --
 -- ExtState "ReaperControl" / "Timecode" (not persisted): the position formatted by REAPER itself in
 -- the modes 0 time, 1 measures.beats + time, 2 measures.beats, 3 seconds, 4 samples, 5 h:m:s:f,

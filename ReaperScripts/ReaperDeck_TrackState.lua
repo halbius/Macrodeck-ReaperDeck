@@ -1,8 +1,8 @@
--- ReaperControl_TrackState.lua
+-- ReaperDeck_TrackState.lua
 --
--- Publishes settings of the selected tracks for the Macro Deck plugin "REAPER Control"
+-- Publishes settings of the selected tracks for the Macro Deck plugin "ReaperDeck"
 -- (actions "Track" and "Track lock"). Runs in the background (defer loop) until REAPER closes or
--- the script is stopped. Start it from Scripts/__startup.lua like ReaperControl_ItemState.lua.
+-- the script is stopped. Start it from Scripts/__startup.lua like ReaperDeck_ItemState.lua.
 --
 -- ExtState "ReaperControl" / <key> for every entry of TRACK_PROPERTIES below (not persisted):
 --   "1" all selected tracks have it on, "0" off or nothing selected, "mixed" different values.

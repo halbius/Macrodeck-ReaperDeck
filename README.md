@@ -1,277 +1,68 @@
-# REAPER Control – Macro Deck 3 Plugin
+# ReaperDeck
 
-Steuert REAPER direkt über dessen Web-Interface (HTTP). Keine Tastaturkürzel, REAPER muss nicht im Fokus sein.
+A [Macro Deck](https://macro-deck.app) plugin that controls [REAPER](https://www.reaper.fm) through
+REAPER's built-in web interface. No hotkeys, no window focus: REAPER reacts even while another program is
+in front. Buttons show live state (playing, muted, locked, current marker, …).
 
-**Stand 0.20.0:** Action „Run REAPER command“ mit Button-Status, feste Actions (Item ruler), Setup-Dialog mit Verbindungstest, Web-API-Client.
+*Unofficial plugin - not affiliated with or endorsed by Cockos.*
 
-> Gebaut gegen `MacroDeck.Plugin.Hosting 3.0.0-beta.17`. Das SDK ist Preview und ändert sich noch. Der Code wurde gegen den SDK-Quellcode geschrieben, aber noch **nicht kompiliert** – erster Schritt ist `dotnet build`.
+## Features
 
-## Voraussetzungen
+- **Run any REAPER command:** native actions, custom actions and ReaScripts, picked by name.
+- **Transport:** play/stop, pause, record, repeat and more, with state-dependent icons and colors.
+- **Item / Track:** mute, solo, lock, phase, loop source, item ruler, open in external editor … -
+  lit while the selected items/tracks have the setting.
+- **View, Toolbars, Insert:** show REAPER's windows, open/close toolbars (as toolbar or menu), insert markers and regions.
+- **Markers and regions:** jump-to buttons named and colored like in REAPER, next/previous, name filters,
+  markers / regions / both, four filter groups, and "set to cursor" (e.g. on Long Press).
+- **Faders:** track volume, item volume, or whatever was clicked last - for Macro Deck's Slider widget.
+- **Timecode tile:** the play/edit cursor in any of REAPER's time formats, colored by transport state,
+  with playback rate and record mode.
+- **Trigger** "REAPER context changed" (tracks / items / envelopes), e.g. to open the matching folder.
+- **Render presets:** open the render dialog with a preset loaded.
 
-- .NET 10 SDK
-- Macro Deck 3 (Version, die Out-of-Process-Plugins unterstützt)
-- REAPER mit aktiviertem Web-Interface:
-  Options → Preferences → Control/OSC/web → **Add** → *Web browser interface*, Port merken (Standard 8080).
-  Optional dort Benutzername/Passwort setzen.
+## Requirements
 
-## Projekt
+- Macro Deck 3, REAPER on the same computer (Windows or macOS).
+- For some features: the SWS extension, and cfillion's "Apply render preset" (ReaPack) for render presets.
 
-```
-ReaperControl/
-├── Program.cs                     Startet das Plugin, registriert Integration + ReaperConnection
-├── ReaperIntegration.cs           Actions, Setup-Flow, liest Konfiguration in InitializeAsync
-├── ConfigFlow/ReaperConfigFlow.cs Setup-Dialog: Host, Port, (erweitert) Login, Resource-Pfad
-├── Actions/RunCommandAction.cs    „Run REAPER command“ mit durchsuchbarer Auswahl
-├── Reaper/
-│   ├── ReaperWebClient.cs         GET /_/cmd;cmd;… , TRANSPORT/TRACK/MARKER, SET/EXTSTATE
-│   ├── ReaperResponseParser.cs    Tab-getrennte Antworten → Records
-│   ├── ReaperActionCatalog.cs     Custom Actions + Scripts aus reaper-kb.ini
-│   ├── ReaperConnection.cs        Geteilter Client (DI-Singleton)
-│   └── ReaperSettings.cs
-├── Values.cs                      Parameterwerte normalisieren
-├── manifest.json                  Plugin-Identität (id vor Veröffentlichung ändern!)
-└── macrodeck-build.json           Build-Ziele win-x64, osx-arm64, osx-x64
-```
+## Setup
 
-## Bauen und testen
+1. **REAPER:** Options → Preferences → Control/OSC/web → **Add** → *Web browser interface*. Note the port
+   (default 8080).
+2. **Macro Deck:** add the ReaperDeck integration. Enter host (`127.0.0.1`) and port; the dialog tests the
+   connection.
+3. **Scripts** (needed for item/track feedback, faders, extra timecode formats, marker colors, set markers,
+   render presets): in the integration settings under *Advanced*, set the **REAPER resource path**
+   (REAPER: Options → *Show REAPER resource path*), tick **Install/update REAPER scripts** and save.
+   The scripts are copied to `Scripts/ReaperDeck`.
+4. **In REAPER, once:** Actions → Show action list → *New action → Load ReaScript…* → choose
+   `Scripts/ReaperDeck/ReaperDeck_Setup.lua` and run it. It adds all scripts to the action list.
+   Repeat only when an update brings a new script.
 
-```bash
-dotnet tool install --global MacroDeck.Plugin.Cli --prerelease
+Nothing needs to go into `__startup.lua`: ReaperDeck starts its background scripts in REAPER only while
+buttons need them, and they stop by themselves when Macro Deck closes.
 
-dotnet build
+After a plugin update: save the integration settings once more (with *Install/update REAPER scripts*
+ticked) and restart REAPER, so the new scripts are used.
 
-# Ohne Macro Deck, gegen einen Wegwerf-Host:
-macrodeck-plugin run --project ReaperControl.csproj --stub-host
+## Tips
 
-# Gegen das laufende Macro Deck (Developer Mode an, Pairing bestätigen):
-macrodeck-plugin run --project ReaperControl.csproj
+- **Adopt states and icons:** when adding an action to a button, let Macro Deck use the states and icon
+  the action provides - that is where labels, colors and icons come from.
+- **Faders:** in the Slider widget choose a *REAPER: … volume* variable, switch on *Show value*, and use
+  variables in the label, e.g. `{{ vars.reaper_track_number }}: {{ vars.reaper_track_name }}`.
+- **Go to + set on one button:** set up *Short Press* with "Go to marker", copy the block to *Long Press*
+  and switch only *On press* to *Set it to the cursor*.
 
-# Paket für die Installation:
-macrodeck-plugin build --output ./artifacts
-macrodeck-plugin validate --artifact ./artifacts/com.example.reaper-control-0.12.1.macroDeckPlugin
-```
+## Known limitations
 
-Die `.macroDeckPlugin`-Datei wird per Drag & Drop in Macro Deck installiert. Nicht von Hand zippen.
+- "Play, skip time selection" lights only for playback started from the deck.
+- The fader's *Show value* and label are settings of Macro Deck's Slider widget and have to be set per slider.
+- Tested on Windows with REAPER 7. Feedback from macOS users is welcome.
 
-## Benutzung
+## License
 
-1. In Macro Deck die Integration einrichten: Host (`127.0.0.1`), Port. Der Dialog testet die Verbindung sofort.
-2. Unter *Erweitert* den REAPER-Resource-Pfad angeben (REAPER: Options → *Show REAPER resource path*). Dann erscheinen Custom Actions und Scripts in der Auswahl mit Namen.
-3. Button anlegen → Action „Run REAPER command“ → Befehl wählen oder eintippen.
+See [LICENSE](LICENSE).
 
-Befehlsformate:
-
-| Typ | Beispiel | Woher |
-| --- | --- | --- |
-| Native Action | `40044` | Action List → Rechtsklick → *Copy selected action command ID* |
-| Custom Action | `_a1b2c3…` | dito, oder Auswahl aus reaper-kb.ini |
-| ReaScript | `_RS7d3c…` | dito |
-| SWS/Erweiterung | `_SWS_ABOUT` | dito |
-| Mehrere | `40042;40044` | mit `;` getrennt, werden der Reihe nach ausgeführt |
-
-Die IDs der vordefinierten nativen Actions in `ReaperActionCatalog.WellKnown` bitte einmal in der Action List gegenprüfen.
-
-## REAPER-Scripts
-
-Einige Rückmeldungen (Item, Track, Item ruler, Timecode-Formate, Abspielrate) und „Load render preset“ brauchen die Lua-Scripts aus `ReaperScripts`. Einrichten, einmalig:
-
-1. Plugin-Einstellungen → *Erweitert*: Resource-Pfad setzen, Haken **Install/update REAPER scripts**, speichern. Die Scripts landen in `<Resource-Pfad>/Scripts/Macrodeck-ReaperControl/` (vorhandene Dateien werden überschrieben – auch nach jedem Plugin-Update so aktualisieren).
-2. REAPER: Actions → Show action list → *New action → Load ReaScript…* → `ReaperControl_Setup.lua` aus diesem Ordner wählen und ausführen. Es trägt alle Scripts in die Action List ein (`AddRemoveReaScript`). Erneut nötig nur, wenn ein Update ein neues Script mitbringt.
-
-**Kein `__startup.lua` nötig:** Das Plugin startet die Hintergrund-Scripts (ItemState, TrackState, Timecode) selbst, sobald eine Taste oder Kachel ihre Werte braucht, und hält sie mit einem Lebenszeichen am Leben (`ScriptKeeper`): alle 2 s ExtState `ReaperControl/<Name>Heartbeat`. Kommt 10 s lang keins (Macro Deck beendet, 75 s lang keine Taste mehr, die das Script braucht), beendet sich das Script selbst. Jedes Script setzt beim Start `ReaperControl/<Name>Running` und löscht es beim Ende; das Plugin startet nur, wenn das fehlt (und höchstens alle 8 s), damit REAPER nie „Script läuft schon“ fragt.
-
-Fehlt ein Script in der Action List, steht im Log „… is not in REAPER's action list“. Alte Kopien (z. B. in `Scripts/ReaperControl/`) und alte `dofile`-Zeilen in `__startup.lua` entfernen – sonst laufen zwei Instanzen; das Plugin bevorzugt die Kopie in `Macrodeck-ReaperControl`.
-
-## Fader (Slider-Widget)
-
-Drei beschreibbare Variablen für Macro Decks Slider-Widget (im Slider als Variable wählen):
-
-| Variable | Steuert |
-| --- | --- |
-| `reaper_track_volume` – REAPER: Track volume | ausgewählte Tracks |
-| `reaper_item_volume` – REAPER: Item volume | ausgewählte Items |
-| `reaper_volume` – REAPER: Volume (follows context) | Tracks oder Items, je nach zuletzt angeklicktem Bereich (Envelopes: inaktiv) |
-
-- Bereich −60 … +12 dB in 0,1-dB-Schritten, −60 = −inf. Angezeigt wird der lauteste ausgewählte Track bzw. das lauteste Item; ohne Auswahl ist der Fader inaktiv.
-- **Beschriftung:** Text-Variablen für das *Label* des Sliders (Variablen im Label: `{{ vars.name }}`), z. B. `{{ vars.reaper_track_number }}: {{ vars.reaper_track_name }}`:
-  `reaper_track_name`, `reaper_track_number`, `reaper_item_name` (aktiver Take) – jeweils des lautesten ausgewählten, bei mehreren mit „(+n)“, ohne Auswahl leer; `reaper_context` („Track“/„Item“/„Envelope“); `reaper_volume_target` (Name dessen, worauf der Kontext-Fader gerade wirkt).
-- Den Wert zeigt der Slider erst mit seiner Einstellung *Show value* (Standard: aus – Einstellung des Sliders, nicht des Plugins).
-- **Trim:** Der lauteste wird auf den Fader-Wert gesetzt, alle anderen ausgewählten um denselben Betrag verschoben (Abstände bleiben).
-- **Undo:** eine Fader-Bewegung = ein Undo-Schritt, 0,7 s nach dem letzten Wert.
-- Technik: Das Plugin schreibt `ReaperControl/<Track|Item>VolumeSet` = `<Nr>|<dB>`; `ReaperControl_TrackState.lua` / `ReaperControl_ItemState.lua` setzen die Lautstärke (`D_VOL`) und veröffentlichen `<Track|Item>Volume`; `…VolumeCommit` setzt den Undo-Punkt. Die Kontext-Variante nutzt `ReaperControl_Context.lua`. Alle Scripts startet das Plugin selbst.
-
-## Markerfarbe ohne eigene Farbe
-
-Marker ohne eigene Farbe meldet das Webinterface ohne Farbe. Mit *Use marker color* nehmen „Go to marker“ und „Go to next/previous marker“ dafür die Farbe, in der REAPER sie zeichnet: Theme-Farbe `marker`, gelesen von `ReaperControl_ThemeColors.lua` (ExtState `ReaperControl/ThemeMarkerColor`). Das Script läuft nur kurz und nur, wenn der Wert fehlt – also einmal nach dem Start von REAPER oder des Plugins (`MarkerMonitor`, höchstens alle 30 s). Ohne Script: `#a00000` (REAPERs Standard-Rot). Nach einem Theme-Wechsel das Script einmal von Hand ausführen.
-
-## Trigger „REAPER context changed“
-
-Ereignis für Macro Decks Trigger: feuert, wenn der zuletzt angeklickte Bereich in REAPER wechselt – *Tracks* (TCP/Mixer), *Items* oder *Envelopes* (`GetCursorContext2`). Im Trigger den Kontext wählen und z. B. die eingebaute Action *Change folder* daranhängen: ein Trigger pro Kontext und Ordner.
-
-- Feuert erst, wenn der Kontext 300 ms gleich bleibt (schnelles Hin- und Herklicken springt nicht mit), und nur beim Wechsel.
-- Läuft nur, solange mindestens ein Trigger dieses Ereignis nutzt: Dann fragt `ContextMonitor` alle 150 ms `ReaperControl/Context` ab und hält `ReaperControl_Context.lua` am Leben; ohne Trigger läuft weder das eine noch das andere.
-- Braucht die installierten Scripts und ein erneutes Ausführen von `ReaperControl_Setup.lua` (neues Script).
-
-## Button-Status (an/aus)
-
-„Run REAPER command“ kann am Button anzeigen, ob eine Action an oder aus ist – derselbe Zustand, den REAPER als Häkchen im Menü bzw. in der Spalte *State* der Action List zeigt.
-
-- Im Button-Editor die Action als **Status-Quelle** übernehmen (Multi state). Zustände: *On*, *Off*, *Unavailable* (REAPER nicht erreichbar bzw. Status-Script läuft nicht); Aussehen pro Zustand frei einstellbar.
-- Standardmäßig zeigt der Button den Zustand des ersten Befehls. Unter **„Show state of“** lässt sich eine andere Command-ID angeben.
-- Actions ohne Zustand (Spalte *State* leer) liefern keinen Status.
-
-Technik: `CommandStateMonitor` fragt im Hintergrund alle 250 ms per `GET/<id>` (`CMDSTATE`) bzw. `GET/EXTSTATE/…` nur die Werte ab, die gerade auf Buttons angezeigt werden – alle in einer Anfrage – und meldet Änderungen per `state.update` an Macro Deck.
-
-## Feste Actions
-
-Fertige Actions ohne Einstellungen, mit Status am Button. Sie stehen in `Actions/FixedCommandAction.cs`, Liste `FixedCommands.All` (derzeit leer). Neue feste Action = eine Zeile in der Liste:
-
-```csharp
-new("meine-action-id", "Anzeigename", "40044"),
-```
-
-Ohne Angabe zeigt der Button den Toggle-Zustand der Action selbst. Optional als vierter Wert eine andere Statusquelle, z. B. ein ExtState, den ein Script setzt:
-
-```csharp
-new("meine-action-id", "Anzeigename", "40044", StateRule.ExtStateEquals("Bereich", "Schlüssel", "Wert")),
-```
-
-Die erste Spalte (Action-ID) speichert Macro Deck in den Profilen: nach dem ersten Einsatz nicht mehr ändern, und jede ID nur einmal vergeben. Name und Command-ID dürfen sich jederzeit ändern. Macro Deck kennt keine Gruppen innerhalb eines Plugins, deshalb ordnet ein gemeinsamer Namens-Präfix zusammengehörige Actions.
-
-## Transport
-
-Action **„Transport“** mit Auswahl *Command*: Play/Stop (40044), Play/Stop + Edit Cursor (40328), Pause (1008, leuchtet nur bei Pause), Repeat (1068), Stop at loop end (41834), Play, Skip Timeline Selection (40317), Record (1013, rot nur während der Aufnahme, auch bei Aufnahme-Pause). Beschriftung = Befehlsname (Schalter *Show text* aus: nur Icon), leuchtet, solange die Action an ist (Spalte *State* der Action List; Play/Stop: solange REAPER spielt). Weitere Befehle: eine Zeile in `Commands` in `Actions/TransportAction.cs`.
-
-### Icons
-
-Die Transport-Action liefert auch das Button-Icon. Beim Hinzufügen bietet Macro Deck an, Status **und** Icon zu übernehmen – beide Häkchen setzen.
-
-- Icons liegen als Dateien in `Assets/Icons` und werden über den Dateinamen ohne Endung angesprochen. **Max. 512 KB pro Datei** (größere werden ignoriert, große Bilder blockieren sonst den Button-Editor), empfohlen 256 × 256 px. **Nur PNG, JPEG, WebP oder GIF** – SVG lehnt Macro Deck für Plugin-Icons ab. Empfohlen: PNG, 256 × 256, weiß auf transparent. Mitgeliefert: `play`, `stop`, `pause`, `repeat`, `record`.
-- Gedimmte Variante für „aus“: eigene Datei `<name>-dim.png` (z. B. gleiches Bild mit 35 % Deckkraft). Fehlt sie, erscheint auch bei „aus“ das volle Icon.
-- Pro Befehl in `Commands`: `Icon:` = Icon für „aus“, optional `IconWhenOn:` = Icon für „an“. Ohne `IconWhenOn` erscheint bei „an“ `<name>.png`, bei „aus“ `<name>-dim.png`.
-- `Assets/IconSources` enthält die SVG-Vorlagen der mitgelieferten Icons (wird nicht ins Paket übernommen).
-
-```csharp
-new("record", "Record", "1013", Icon: "record"),                       // record.png / record-dim.png
-new("play-stop", "Play/Stop", "40044", Icon: "play", IconWhenOn: "stop"), // zwei Icons
-```
-
-Neues Icon: Datei nach `Assets/Icons` legen, Namen in die Zeile schreiben, Version erhöhen, neu bauen. Die mitgelieferten Icons sind schlichte eigene Formen und lassen sich durch eigene Dateien mit gleichem Namen ersetzen.
-
-## Item
-
-Action **„Item“** mit Auswahl *Command*: Einstellungen der ausgewählten Items, u. a. Mute, Loop Source, Lock, Play All Takes, FX Chain. Rot, wenn alle ausgewählten Items stummgeschaltet sind, sonst dunkel grau-rot (`OnColor`/`OffColor` pro Eintrag in `Commands`). Die Rückmeldung kommt vom Status-Script (siehe unten), Tabelle `ITEM_PROPERTIES`.
-
-Neue Item-Einstellung mit Rückmeldung = zwei Zeilen:
-1. `Actions/ItemAction.cs`: `new("lock", "Lock", "<Command-ID>", State: SelectedItems("ItemLock")),`
-2. Lua-Script, Tabelle `ITEM_PROPERTIES`: `ItemLock = "C_LOCK",` (Parametername von `GetMediaItemInfo_Value`)
-
-## Item: Open in editor
-
-Action **„Item: Open in editor“**: öffnet die ausgewählten Items (oder Kopien davon) im primären/sekundären externen Editor – 40109 / 40202 (Items), 40132 / 40203 (Kopien). Ohne Rückmeldung. Beschriftung „Open items in <Editor>“ bzw. „Open item copies in <Editor>“: Der Editor kommt aus `reaper.ini` (`[extedit]`, `__default__=<primär>|<sekundär>`, braucht den Resource-Pfad), gekürzt nach den Regeln in `EditorNames.Rules` („iZotope RX 11 Audio Editor.exe“ → „RX11“, „Sequoia_x64.exe“ → „Sequoia“). Das Feld *Editor name* überschreibt den Namen pro Taste.
-
-## Track
-
-Action **„Track“** mit Auswahl *Command*: Mute (6), Solo (7), Unsolo All (40340, leuchtet gelb, solange irgendein Track solo ist), Pin Tracks (40000), Lock, Phase (40282). Die Rückmeldung kommt vom Script `ReaperScripts/ReaperControl_TrackState.lua` (Tabelle `TRACK_PROPERTIES`, dazu `TrackAnySolo`); das Plugin startet es selbst (siehe „REAPER-Scripts“).
-
-**Lock** hat eine eigene Auswahl *Lock type* (nur sichtbar, wenn *Lock* gewählt ist): Controls (41314), Height (42336), Items (43696). Controls = `LOCK 1` im Track-Teil des Chunks, Height = `B_HEIGHTLOCK`, Items = alle Items des Tracks gesperrt (43696 sperrt die Items einzeln). Tasten, die noch mit den früheren Einzeleinträgen „Lock Track Controls/Height/Items“ angelegt wurden, funktionieren weiter.
-
-Varianten wie bei Lock: in `Commands` beim Eintrag `Options: [...]` (je `new(Key, Name, Command-ID, State)`) und `OptionsLabel:` angeben – `CommandListAction` blendet dafür ein eigenes Auswahlfeld ein.
-
-## Toolbar
-
-Action **„Toolbar“**: öffnet/schließt eine der schwebenden Toolbars 1–32. Einstellungen: *Toolbar* (Nummer), *Open* (*As toolbar* / *As menu*), bei *As toolbar* zusätzlich *Open toolbar at mouse cursor*. Keine Rückmeldung; die Taste zeigt den Namen der Toolbar (`title=` im Abschnitt `[Floating toolbar <n>]` von `reaper-menu.ini`, braucht den Ressourcenpfad in den Plugin-Einstellungen), sonst „Toolbar <n>“. Die Command-IDs liegen in Blöcken (REAPER hat die Toolbars nach und nach erweitert) und stehen in `ToolbarAction.CommandId`.
-
-## View
-
-Action **„View“** mit Auswahl *Command*: blendet ein Fenster aus dem View-Menü ein/aus (Media Explorer, Routing Matrix, Track Grouping Matrix, Track Wiring, Project Bay, Track Manager, Track Group Manager, Envelope Manager, Screensets / Layouts, Region / Marker Manager, Ruler Lane Manager, Media Item Properties). Ohne Rückmeldung, Beschriftung = Fenstername. Weiteres Fenster: eine Zeile in `Commands` in `Actions/ViewAction.cs`. Technik: `ShowsState => false` in `CommandListAction` (ein einziger Zustand nur mit Beschriftung, kein *Show text*).
-
-### Aufbau Transport / Item / Track
-
-Beide erben von `Actions/CommandListAction.cs` (Zustands-IDs werden dort kurz gehalten: Macro Deck erlaubt bei Actions mit Icon nur ca. 26 Zeichen), das Ausführen, Status, Farben, Icons und *Show text* erledigt. Eine eigene Liste braucht nur Id, Name, Beschreibung und die Liste `Commands`. Unterschied ist nur, woher „an“ kommt:
-- ohne `State:` – Toggle-Zustand der REAPER-Action,
-- `State: Playing / Paused` – Transport-Status (Web-Interface, kein Script),
-- `State: SelectedItems("…")` – Wert vom Lua-Script.
-
-
-## Item ruler
-
-In der Action **„Item“**: Eintrag *Item Ruler* mit Auswahl *Ruler mode* (früher eigene Action „Item ruler“, Tasten von damals neu anlegen): Item time (42312), Item H:M:S:F (42314), Item beats (42315), Item beats, minimal (42359), Source time (42313), Source time H:M:S:F (42358). Setzt den Modus für die ausgewählten Items; Beschriftung = Modusname, leuchtet, solange die ausgewählten Items diesen Modus haben.
-
-### Status-Script
-
-Das Ruler-Format ist eine Eigenschaft jedes Items (Zeile `ITEMRULER <modus> 0 0` im Item-Chunk), daher liefern die Actions 42312 … keinen Toggle-Zustand (`-1`). Den Status veröffentlicht stattdessen `ReaperScripts/ReaperControl_ItemState.lua`:
-
-- ExtState `ReaperControl/ItemRuler` = `1`…`6` (Modus aller ausgewählten Items: 1 Item time, 2 Source time, 3 Item H:M:S:F, 4 Item beats, 5 Item beats minimal, 6 Source time H:M:S:F), `0` (nichts ausgewählt / kein Ruler), `mixed` (unterschiedliche Modi).
-- Leuchtet: der Button, dessen Modus alle ausgewählten Items haben. Läuft das Script nicht, zeigen die Buttons *Unavailable*.
-
-Einrichten: siehe „REAPER-Scripts“ – das Plugin startet das Script selbst.
-
-Die erste Spalte (Action-ID) speichert Macro Deck in den Profilen: nach dem ersten Einsatz nicht mehr ändern, und jede ID nur einmal vergeben. Name und Command-ID dürfen sich jederzeit ändern. Macro Deck kennt keine Gruppen innerhalb eines Plugins, deshalb ordnet ein gemeinsamer Namens-Präfix („Item ruler: …“) zusammengehörige Actions.
-
-## Render-Preset laden
-
-Action **„Load render preset“**: öffnet den Render-Dialog mit dem gewählten Preset geladen – rendert nicht. Die Action lässt sich auf beliebig viele Buttons legen, jeder mit eigenem Preset (Auswahlliste aus `reaper-render.ini`).
-
-Voraussetzungen:
-1. Im Plugin-Setup ist der **REAPER-Resource-Pfad** gesetzt (für Presetliste und Script-Suche).
-2. **SWS-Extension** und **cfillion „Apply render preset“** (ReaPack → ReaTeam Scripts) sind installiert.
-3. Scripts installiert und `ReaperControl_Setup.lua` einmal ausgeführt (siehe „REAPER-Scripts“). **Nicht umbenennen** – das Plugin findet das Script über den Dateinamen in `reaper-kb.ini`.
-
-Ablauf: Das Plugin setzt ExtState `ReaperControl/RenderPreset` = Presetname und startet das Script in derselben Anfrage; das Script wendet das Preset über cfillions Script an und öffnet den Render-Dialog (Action 40015). Liegt cfillions Script woanders, Pfad oben im Lua-Script anpassen.
-
-Beschriftung: Die Action liefert den Preset-Namen als Button-Beschriftung. Macro Deck fragt **beim Hinzufügen der Action** zum Button, ob die bereitgestellten Status verwendet werden sollen – bestätigen, dann das Preset wählen; danach trägt der Button den Namen und übernimmt bei einem Preset-Wechsel den neuen. Eine von Hand geänderte Beschriftung bleibt erhalten, solange das Preset gleich bleibt.
-
-Langer Tastendruck: In Macro Deck hat jeder Button eigene Abläufe für *Short Press* und *Long Press* – eine zweite Action dort eintragen.
-
-## Marker
-
-Drei Actions; beim Hinzufügen „Bereitgestellte Status verwenden“ bestätigen:
-
-| Action | Einstellung | Verhalten |
-| --- | --- | --- |
-| **Go to marker** | Marker-ID / Slot, Schalter *Follow marker filter* und *Use marker color* (Standard: an) | Springt zum Marker, Beschriftung „Name“ und darunter „ID: n“. Mit *Follow marker filter* und aktivem Filter: der n-te passende Marker (zeitliche Reihenfolge) – für einen Folder mit Tasten 1, 2, 3, … |
-| **Go to next / previous marker** | Richtung (next / previous / *Switch "Follow filter"*), *Follow marker filter* (Umschalt-Taste / immer / nie), *Use marker color* | Springt zum nächsten Marker rechts bzw. vorherigen links vom Cursor. Folgt die Taste dem aktiven Filter, erscheint oben rechts ein Filtersymbol (Icon `filter-badge.png`; beim Hinzufügen auch „Button-Symbol“ übernehmen). Richtung *Switch "Follow filter"*: schaltet für alle Next/Previous-Tasten mit „Follow the switch button“ um – ohne eigene Beschriftung, damit es auf *Long Press* einer Next/Previous-Taste passt. Für eine eigene leuchtende Umschalt-Taste: Variable `reaper_marker_nav_filtered` per *State mapping*. Beschriftung „Go to next“/„Go to previous“ und darunter der Markername, folgt dem Cursor. |
-| **Marker filter** | Text, „enthält“ / „beginnt mit“ | Aktiviert den Filter; erneuter Druck zeigt wieder alle. Immer nur ein Filter aktiv. Groß-/Kleinschreibung egal. |
-
-- Aktueller Marker (Play-/Edit-Cursor ab dem Marker bis zum nächsten): mit *Use marker color* in voller Markerfarbe, alle anderen abgedunkelt; ohne eigene Markerfarbe bzw. Schalter aus: aktueller Marker grün, die anderen dunkelgrau.
-- Leere Slots (weniger Treffer als Tasten) zeigen keine Beschriftung und tun nichts.
-- Nur Marker, keine Regionen. Der Filter gilt Plugin-weit (alle Folder) und ist nach einem Neustart des Plugins aufgehoben.
-- Technik: `MarkerMonitor` fragt alle 300 ms `MARKER;TRANSPORT` ab, solange Marker-Tasten angezeigt werden; Sprung per `SET/POS_STR/m<ID>`.
-
-
-### Regionen und Filtergruppen
-
-- **Regionen:** Die Marker-Actions zeigen auch Regionen. Beschriftung „<Name>“ + „M3“ / „R3“ (wie in REAPER). Eine Region ist „aktuell“, solange der Cursor in ihr steht; bei Markers + Regions können ein Marker und eine Region gleichzeitig leuchten. Sprung: `SET/POS_STR/m<ID>` bzw. `r<ID>` (Regionsanfang).
-- **Filtergruppen A–D:** je Gruppe ein Namensfilter („Marker filter“), ein Typ („Marker type“: Markers / Regions / Markers + Regions, nach dem Start *Markers*) und der Follow-Schalter für Next/Previous. Filtertasten haben *Filter group* (A–D), „Go to marker“ hat *Follow filter group* (None / A–D), Next/Previous *Filter group* (Markers/Regions/Both kommen immer aus der Gruppe) plus *Follow marker filter* (nur für den Namensfilter; *Switch* schaltet das pro Gruppe um).
-- **„Marker type“:** *Mode* = fester Typ (leuchtet, solange aktiv) oder *Switch* (jeder Druck: Markers → Regions → Both; Beschriftung = aktueller Typ). Auf einzelne Tasten oder auf Short/Long/Double Press legbar.
-- **Nummern bei „Go to marker“:** ein Typ ohne Namensfilter: echte ID (M3 bzw. R3); *Markers + Regions* oder Namensfilter: n-ter Eintrag der Liste in Zeitreihenfolge.
-- **Ältere Tasten:** „Follow marker filter“ an = Gruppe A; Filtertasten und Next/Previous ohne Gruppe = A.
-- **Setzen statt Springen:** „Go to marker“ → *On press* = *Set it to the cursor*: verschiebt den Marker/die Region der Taste an den Cursor (Abspielposition beim Abspielen, sonst Edit-Cursor) bzw. legt auf einer leeren Taste einen neuen an (Nummer der Taste als ID, wo Nummern IDs sind; Name = aktiver Namensfilter). *Set mode*: Set / Set and edit the name. *Regions*: Move (Start an den Cursor, Länge bleibt) / Start to the cursor (Ende bleibt) / To the time selection; neue Regionen immer aus der Time Selection. Ein Undo-Schritt. Script `ReaperControl_SetMarker.lua` (läuft nur beim Druck). Tipp: Block im Aktionen-Editor nach *Long Press* kopieren und nur *On press* umstellen.
-- Regionen ohne eigene Farbe: Theme-Farbe `region` (`ReaperControl_ThemeColors.lua`), sonst `#508585` (REAPER-Standard).
-
-## Widget „REAPER timecode“
-
-Eigener Widget-Typ (Kachel): zeigt die Position des Play-Cursors (beim Abspielen/Pause/Aufnahme) bzw. Edit-Cursors. Im Deck-Editor wie die eingebauten Widgets hinzufügen.
-
-Die Zeit wechselt die Farbe mit dem Transport: grün beim Abspielen, gelb bei Pause, rot bei Aufnahme, orange bei Aufnahme-Pause; im Stopp die eingestellte Textfarbe.
-
-Darunter optional eine Infozeile: *Show playback rate* (z. B. „Rate 1.00“, braucht `ReaperControl_Timecode.lua`) und *Show record mode* („Rec: Normal / Time punch / Item punch“, aus dem Zustand der Actions 40252 / 40076 / 40253, kein Script nötig). Beide standardmäßig an.
-
-Konfiguration: *Format*, *Show playback rate*, *Show record mode*, Rahmen, Hintergrund (auch transparent), Textfarbe. Im Aktionen-Editor des Widgets lassen sich wie bei einem Button Actions auf *Short Press*, *Long Press* usw. legen.
-
-| Format | Script nötig? |
-| --- | --- |
-| Like transport window (Standard) | nein |
-| Measures.Beats | nein |
-| Minutes:Seconds, Seconds | nein (mit Script exakt wie REAPER formatiert) |
-| Measures.Beats + Time, Samples, Hours:Minutes:Seconds:Frames, Absolute frames | ja |
-
-Script `ReaperScripts/ReaperControl_Timecode.lua`: einrichten siehe „REAPER-Scripts“; das Plugin startet es, solange eine Timecode-Kachel offen ist.
-
-Technik: `TimecodeMonitor` fragt nur, solange eine Timecode-Kachel offen ist, alle 100 ms `TRANSPORT`, `GET/EXTSTATE/ReaperControl/Timecode` und `…/PlayRate` sowie `GET/40252;GET/40076;GET/40253` ab; das Script schreibt die Position in allen Formaten über `format_timestr_pos`.
-
-## Nächste Schritte
-
-- **Marker-Manager mobil:** Liste per `GetMarkersAsync`; Ändern über `SetExtStateAsync` + kleines Lua-Script (`reaper.GetExtState` → `SetProjectMarker4`), das per Command-ID aufgerufen wird. Für die Oberfläche die Macro-Deck-Views (List, Text field) prüfen.
-- Tests mit `MacroDeck.Plugin.Testing`.
+Developer documentation (German): [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).

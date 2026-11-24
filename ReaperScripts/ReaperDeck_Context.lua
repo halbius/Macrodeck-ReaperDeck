@@ -1,7 +1,7 @@
--- ReaperControl_Context.lua
+-- ReaperDeck_Context.lua
 --
 -- Publishes REAPER's cursor context - the area last clicked: tracks (TCP/mixer), items or envelopes -
--- for the Macro Deck plugin "REAPER Control" (trigger "REAPER context changed", e.g. to open a folder).
+-- for the Macro Deck plugin "ReaperDeck" (trigger "REAPER context changed", e.g. to open a folder).
 -- Runs in the background (defer loop) while the plugin needs it; started and stopped by the plugin.
 --
 -- ExtState "ReaperControl" / "Context" (not persisted): "tracks", "items" or "envelopes".

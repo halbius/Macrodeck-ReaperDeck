@@ -28,10 +28,10 @@
     <Content Include="manifest.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/icon.svg" CopyToOutputDirectory="PreserveNewest" />
     <!-- Button icons (IconLibrary): every file in Assets/Icons goes into the package. -->
-    <Content Include="Assets/Icons/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/Icons/**" CopyToOutputDirectory="Always" CopyToPublishDirectory="PreserveNewest" />
     <!-- REAPER scripts: next to the plugin for a dev run, so "Install/update REAPER scripts" finds them
          (the package has them at its root via macrodeck-build.json). -->
-    <Content Include="ReaperScripts/**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ReaperScripts/**" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>

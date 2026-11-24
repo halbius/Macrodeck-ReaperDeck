@@ -2,20 +2,20 @@ namespace ReaperControl.Reaper;
 
 /// <summary>
 /// The Lua scripts that come with the plugin (folder ReaperScripts in the package) and where they go
-/// in REAPER: &lt;resource path&gt;/Scripts/Macrodeck-ReaperControl.
+/// in REAPER: &lt;resource path&gt;/Scripts/ReaperDeck.
 /// </summary>
 public static class ReaperScriptFiles
 {
     /// <summary>Folder below REAPER's Scripts folder. Changing it changes the scripts' command ids.</summary>
-    public const string InstallFolder = "Macrodeck-ReaperControl";
+    public const string InstallFolder = "ReaperDeck";
 
     /// <summary>The background scripts the plugin starts and stops on its own (see ScriptKeeper).</summary>
     public static readonly IReadOnlyList<BackgroundScript> Background =
     [
-        new("ItemState", "ReaperControl_ItemState.lua"),
-        new("TrackState", "ReaperControl_TrackState.lua"),
-        new("Timecode", "ReaperControl_Timecode.lua"),
-        new("Context", "ReaperControl_Context.lua"),
+        new("ItemState", "ReaperDeck_ItemState.lua"),
+        new("TrackState", "ReaperDeck_TrackState.lua"),
+        new("Timecode", "ReaperDeck_Timecode.lua"),
+        new("Context", "ReaperDeck_Context.lua"),
     ];
 
     /// <summary>

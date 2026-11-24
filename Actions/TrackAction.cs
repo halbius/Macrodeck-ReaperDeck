@@ -9,7 +9,7 @@ namespace ReaperControl.Actions;
 /// </summary>
 /// <remarks>
 /// Item settings are stored per item, so REAPER's item actions have no on/off state of their own.
-/// "On" comes from ReaperScripts/ReaperControl_ItemState.lua instead: it publishes the settings of
+/// "On" comes from ReaperScripts/ReaperDeck_ItemState.lua instead: it publishes the settings of
 /// the selected items as ExtState "ReaperControl"/"&lt;name&gt;" with "1" (all selected items on), "0"
 /// (off or nothing selected) or "mixed".
 ///
