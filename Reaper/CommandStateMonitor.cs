@@ -61,10 +61,35 @@ public sealed class CommandStateMonitor(
     /// <summary>Stores values read elsewhere (e.g. right after an action ran), keyed by source key.</summary>
     public void Update(IReadOnlyDictionary<string, string> values)
     {
+        var changed = false;
         foreach (var (key, value) in values)
         {
-            _entries.GetOrAdd(key, _ => new Entry()).Value = value;
+            var entry = _entries.GetOrAdd(key, _ => new Entry());
+            if (entry.Value != value)
+            {
+                entry.Value = value;
+                changed = true;
+            }
         }
+
+        // A button press reads the new toggle state in the same request: the background poll then sees
+        // no change, so the icons must be refreshed here - otherwise they wait for Macro Deck's next
+        // icon poll (several seconds).
+        if (changed)
+        {
+            NotifyChanged();
+        }
+    }
+
+    /// <summary>Tells Macro Deck to re-read states and state-driven icons now.</summary>
+    private void NotifyChanged()
+    {
+        // Brings Macro Deck's next state read forward for all of this plugin's action buttons
+        // (no local id: several actions show states - "run-command" and the fixed ones).
+        notifier.CatalogChanged("actions", reason: "reaper-state");
+        // Icons are polled separately; bring the read forward for actions with state-driven icons.
+        connection.InvalidateIcons(ReaperControl.Actions.TransportAction.ActionId,
+            ReaperControl.Actions.ItemAction.ActionId, ReaperControl.Actions.TrackAction.ActionId);
     }
 
     /// <summary>Poll now instead of at the next interval, e.g. after a button changed something.</summary>
@@ -157,12 +182,7 @@ public sealed class CommandStateMonitor(
 
         if (changed)
         {
-            // Brings Macro Deck's next state read forward for all of this plugin's action buttons
-            // (no local id: several actions show states - "run-command" and the fixed ones).
-            notifier.CatalogChanged("actions", reason: "reaper-state");
-            // Icons are polled separately; bring the read forward for actions with state-driven icons.
-            connection.InvalidateIcons(ReaperControl.Actions.TransportAction.ActionId, ReaperControl.Actions.ItemAction.ActionId, ReaperControl.Actions.TrackAction.ActionId);
-            
+            NotifyChanged();
         }
     }
 

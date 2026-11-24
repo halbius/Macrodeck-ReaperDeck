@@ -43,8 +43,8 @@ public sealed class NextPreviousMarkerAction(
     [
         ActionParameter.Choice(DirectionParameter,
             [
-                new ActionParameterOption { Value = "next", Label = "Next marker (right of the cursor)" },
                 new ActionParameterOption { Value = "previous", Label = "Previous marker (left of the cursor)" },
+                new ActionParameterOption { Value = "next", Label = "Next marker (right of the cursor)" },
                 new ActionParameterOption
                 {
                     Value = ToggleDirection,
