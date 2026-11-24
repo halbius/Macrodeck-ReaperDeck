@@ -3,16 +3,16 @@
   "manifestVersion": 1,
   "id": "de.christianalpen.reaperdeck",
   "name": "ReaperDeck",
-  "version": "0.20.0",
+  "version": "1.0.0",
   "description": "Controls REAPER from Macro Deck through REAPER's web interface - no hotkeys, REAPER does not need focus: actions, transport, items, tracks, markers and regions, faders, a timecode tile and more. Unofficial plugin, not affiliated with Cockos.",
   "publisher": {
     "name": "Christian Alpen"
   },
-  "license": "TODO",
+  "license": "MIT",
   "compatibility": {
     "macroDeck": ">=3.0.0-0"
   },
-  "repository": "https://github.com/halbius/Macrodeck-ReaperControl",
+  "repository": "https://github.com/halbius/Macrodeck-ReaperDeck",
   "ai": {
     "interaction": false,
     "generatedContent": false,

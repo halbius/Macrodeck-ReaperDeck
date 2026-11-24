@@ -1,12 +1,17 @@
 using MacroDeck.Plugin.Hosting;
 using MacroDeck.Plugin.Serilog;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using ReaperControl;
 using ReaperControl.Reaper;
 
 var builder = MacroDeckPlugin.CreatePlugin(args)
     .UseMacroDeckLogging()
     .RegisterIntegration<ReaperIntegration>();
+
+// When Macro Deck stops the plugin, end within a few seconds even if a REAPER request still hangs:
+// the supervisor expects a stopped managed plugin to be gone (conformance check MDC0604, 15 s).
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
 // One shared connection: the integration fills it from the stored config, the actions use it.
 builder.Services.AddSingleton<ReaperConnection>();
