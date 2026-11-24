@@ -454,7 +454,11 @@ public sealed class MarkerFilterAction(MarkerFilterState filters, MarkerMonitor 
             },
             new(offId, label)
             {
-                DefaultAppearance = new ActionStateAppearance { Label = label }
+                // Explicit colors: a state without a background color gets a bright one filled in by Macro Deck.
+                DefaultAppearance = new ActionStateAppearance
+                {
+                    Label = label, BackgroundColor = "#2d3748", LabelColor = "#e2e8f0"
+                }
             }
         ];
 

@@ -40,11 +40,11 @@ public sealed class TransportAction(
         // Play buttons show what a press does: "play" while stopped, "stop" while playing.
         new("play-stop", "Play/Stop", "40044", Icon: "play", IconWhenOn: "stop", State: Playing),
         new("play-stop-move-editcursor", "Play/Stop, Move Edit Cursor", "40328",
-            Icon: "play", IconWhenOn: "stop-move-editcursor", State: Playing),
+            Icon: "stop-move-editcursor", State: Playing),
         // Lit (full icon) only while paused; dimmed while playing or stopped.
         new("pause", "Pause", "1008", Icon: "pause", State: Paused),
-        new("repeat", "Repeat", "1068", Icon: "repeat-dim"),
-        new("stop-at-loop-end", "Stop at loop end", "41834"),
+        new("repeat", "Repeat", "1068", Icon: "repeat"),
+        new("stop-at-loop-end", "Stop at loop end", "41834", Icon: "stop_at_loop_end"),
         // Same icon either way (IconWhenOn = Icon: never dimmed); lit while playing.
         new("play-skip-selection", "Play, Skip Timeline Selection", "40317",
             Icon: "play-skip-selection", State: Playing),
