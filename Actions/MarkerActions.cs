@@ -118,7 +118,13 @@ public sealed class MarkerButtonAction(
     private const string NumberParameter = "number";
     private const string FollowFilterParameter = "followFilter"; // before filter groups: true = group A
     private const string UseColorParameter = "useMarkerColor";
+    private const string OnPressParameter = "onPress";
+    private const string SetModeParameter = "setMode";
+    private const string RegionModeParameter = "regionMode";
     private const string EmptyStateId = "marker-empty";
+
+    /// <summary>Does the setting on the cursor; see ReaperScripts/ReaperControl_SetMarker.lua.</summary>
+    public const string SetScriptFileName = "ReaperControl_SetMarker.lua";
 
     public string Id => ActionId;
 
@@ -141,7 +147,34 @@ public sealed class MarkerButtonAction(
         ActionParameter.Toggle(UseColorParameter, "Use marker color",
             "Button in the marker's or region's color: full for the current one, dimmed for the others. " +
             "Without a color of their own: REAPER's theme color (default red).",
-            defaultValue: true)
+            defaultValue: true),
+        // Same button, other press (e.g. Long Press): copy the block and switch this to "Set".
+        ActionParameter.Choice(OnPressParameter,
+            [
+                new ActionParameterOption { Value = "goto", Label = "Go to the marker / region" },
+                new ActionParameterOption { Value = "set", Label = "Set it to the cursor" }
+            ],
+            "On press",
+            "\"Set\" moves the marker/region this button shows to the cursor, or creates one on an empty button. " +
+            "Tip: copy this block to Long Press and switch only this setting.",
+            defaultValue: "goto"),
+        ActionParameter.Choice(SetModeParameter,
+                [
+                    new ActionParameterOption { Value = "insert", Label = "Set" },
+                    new ActionParameterOption { Value = "edit", Label = "Set and edit the name" }
+                ],
+                "Set mode", defaultValue: "insert")
+            .OnlyWhen(OnPressParameter, "set"),
+        ActionParameter.Choice(RegionModeParameter,
+                [
+                    new ActionParameterOption { Value = "move", Label = "Move: start to the cursor, same length" },
+                    new ActionParameterOption { Value = "start", Label = "Start to the cursor, end stays" },
+                    new ActionParameterOption { Value = "selection", Label = "To the time selection" }
+                ],
+                "Regions",
+                "How a region is set. A new region (empty button) always comes from the time selection.",
+                defaultValue: "move")
+            .OnlyWhen(OnPressParameter, "set")
     ];
 
     public TimeSpan StatePollInterval => TimeSpan.FromSeconds(1);
@@ -247,6 +280,28 @@ public sealed class MarkerButtonAction(
     internal static string PositionOf(ReaperMarker marker) =>
         (marker.IsRegion ? "r" : "m") + marker.Id.ToString(CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// "Set": hands the job to ReaperControl_SetMarker.lua in one request (ExtState "MarkerSet", then the
+    /// script): move this marker/region to the cursor, or create one - with the button's number as ID
+    /// when the view uses IDs, named after the name filter if one is active. One undo step.
+    /// </summary>
+    private string SetJob<T>(ReaperMarker? marker, IReadOnlyDictionary<string, T> parameters)
+    {
+        var view = ViewOf(parameters);
+        var region = marker?.IsRegion ?? view.Kind == MarkerKind.Regions;
+        string[] fields =
+        [
+            region ? "R" : "M",
+            marker?.Id.ToString(CultureInfo.InvariantCulture) ?? "",
+            // New one: the button's number as ID where numbers are IDs, else REAPER picks one.
+            marker is null && view.UsesIds && NumberOf(parameters) is { } n ? n.ToString(CultureInfo.InvariantCulture) : "",
+            Values.Get(parameters, RegionModeParameter) ?? "move",
+            Values.Get(parameters, SetModeParameter) == "edit" ? "1" : "0",
+            marker is null ? view.Filter?.Text ?? "" : "" // name of a new one: the filter text
+        ];
+        return string.Join('\t', fields);
+    }
+
     private sealed class Executor(
         MarkerButtonAction action,
         ReaperConnection connection,
@@ -264,6 +319,14 @@ public sealed class MarkerButtonAction(
             // Resolve against the markers the button shows, so the press goes where the label says.
             var snapshot = markers.Get();
             var marker = snapshot is null ? null : action.Resolve(context.Parameters, snapshot);
+
+            if (Values.Get(context.Parameters, OnPressParameter) == "set")
+            {
+                return snapshot is null
+                    ? ActionResult.Failed(ActionErrorCodes.NotConnected, "The markers are not loaded yet.")
+                    : await SetAsync(client, marker, context);
+            }
+
             if (marker is null)
             {
                 logger.LogInformation(
@@ -275,7 +338,7 @@ public sealed class MarkerButtonAction(
 
             try
             {
-                await client.SendAsync([$"SET/POS_STR/{PositionOf(marker)}"], context.CancellationToken);
+                await client.SendAsync([$"SET/POS_STR/{PositionOf(marker!)}"], context.CancellationToken);
                 markers.RequestRefresh();
                 return ActionResult.Success();
             }
@@ -290,6 +353,42 @@ public sealed class MarkerButtonAction(
             catch (HttpRequestException ex)
             {
                 logger.LogWarning(ex, "Jumping to {Marker} failed", MarkerMonitor.Key(marker));
+                return ActionResult.Failed(ActionErrorCodes.NotConnected,
+                    "REAPER is not reachable. Is it running with the web interface enabled?");
+            }
+        }
+
+        private async Task<ActionResult> SetAsync(
+            ReaperWebClient client, ReaperMarker? marker, ActionExecutionContext context)
+        {
+            var scriptId = connection.Catalog.FindScriptCommandId(SetScriptFileName, ReaperScriptFiles.InstallFolder);
+            if (scriptId is null)
+            {
+                return ActionResult.Failed(ActionErrorCodes.NotFound,
+                    $"{SetScriptFileName} is not in REAPER's action list: install the scripts and run " +
+                    "ReaperControl_Setup.lua once.");
+            }
+
+            try
+            {
+                // One request, handled in order: hand over the job, then run the script.
+                await client.SendEncodedAsync(
+                    [
+                        ReaperWebClient.EncodeSetExtState("ReaperControl", "MarkerSet",
+                            action.SetJob(marker, context.Parameters)),
+                        Uri.EscapeDataString(scriptId)
+                    ],
+                    context.CancellationToken);
+                markers.RequestRefresh();
+                return ActionResult.Success();
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                logger.LogWarning(ex, "Setting {Marker} failed", MarkerMonitor.Key(marker));
                 return ActionResult.Failed(ActionErrorCodes.NotConnected,
                     "REAPER is not reachable. Is it running with the web interface enabled?");
             }

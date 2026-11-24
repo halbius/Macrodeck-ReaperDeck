@@ -2,7 +2,7 @@
 
 Steuert REAPER direkt über dessen Web-Interface (HTTP). Keine Tastaturkürzel, REAPER muss nicht im Fokus sein.
 
-**Stand 0.18.1:** Action „Run REAPER command“ mit Button-Status, feste Actions (Item ruler), Setup-Dialog mit Verbindungstest, Web-API-Client.
+**Stand 0.20.0:** Action „Run REAPER command“ mit Button-Status, feste Actions (Item ruler), Setup-Dialog mit Verbindungstest, Web-API-Client.
 
 > Gebaut gegen `MacroDeck.Plugin.Hosting 3.0.0-beta.17`. Das SDK ist Preview und ändert sich noch. Der Code wurde gegen den SDK-Quellcode geschrieben, aber noch **nicht kompiliert** – erster Schritt ist `dotnet build`.
 
@@ -247,6 +247,7 @@ Drei Actions; beim Hinzufügen „Bereitgestellte Status verwenden“ bestätige
 - **„Marker type“:** *Mode* = fester Typ (leuchtet, solange aktiv) oder *Switch* (jeder Druck: Markers → Regions → Both; Beschriftung = aktueller Typ). Auf einzelne Tasten oder auf Short/Long/Double Press legbar.
 - **Nummern bei „Go to marker“:** ein Typ ohne Namensfilter: echte ID (M3 bzw. R3); *Markers + Regions* oder Namensfilter: n-ter Eintrag der Liste in Zeitreihenfolge.
 - **Ältere Tasten:** „Follow marker filter“ an = Gruppe A; Filtertasten und Next/Previous ohne Gruppe = A.
+- **Setzen statt Springen:** „Go to marker“ → *On press* = *Set it to the cursor*: verschiebt den Marker/die Region der Taste an den Cursor (Abspielposition beim Abspielen, sonst Edit-Cursor) bzw. legt auf einer leeren Taste einen neuen an (Nummer der Taste als ID, wo Nummern IDs sind; Name = aktiver Namensfilter). *Set mode*: Set / Set and edit the name. *Regions*: Move (Start an den Cursor, Länge bleibt) / Start to the cursor (Ende bleibt) / To the time selection; neue Regionen immer aus der Time Selection. Ein Undo-Schritt. Script `ReaperControl_SetMarker.lua` (läuft nur beim Druck). Tipp: Block im Aktionen-Editor nach *Long Press* kopieren und nur *On press* umstellen.
 - Regionen ohne eigene Farbe: Theme-Farbe `region` (`ReaperControl_ThemeColors.lua`), sonst `#508585` (REAPER-Standard).
 
 ## Widget „REAPER timecode“
