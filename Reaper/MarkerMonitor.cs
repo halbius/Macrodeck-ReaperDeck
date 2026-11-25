@@ -80,7 +80,8 @@ public sealed class MarkerMonitor(
     {
         notifier.CatalogChanged("actions", reason: "markers");
         // The filter badge of next/previous buttons is an icon, read separately from states.
-        connection.InvalidateIcons(ReaperControl.Actions.NextPreviousMarkerAction.ActionId);
+        connection.InvalidateIcons(ReaperControl.Actions.NextPreviousMarkerAction.ActionId,
+            ReaperControl.Actions.MarkerFilterAction.ActionId);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

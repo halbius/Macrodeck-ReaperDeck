@@ -401,7 +401,7 @@ public sealed class MarkerButtonAction(
 /// filter text as label, lit while the filter is active. One name filter per group at a time.
 /// </summary>
 public sealed class MarkerFilterAction(MarkerFilterState filters, MarkerMonitor markers)
-    : IActionDefinition, IStateProviderActionDefinition
+    : IActionDefinition, IStateProviderActionDefinition, IIconProviderActionDefinition
 {
     // Persisted in users' profiles - never rename after release.
     public const string ActionId = "marker-filter";
@@ -467,6 +467,24 @@ public sealed class MarkerFilterAction(MarkerFilterState filters, MarkerMonitor 
     }
 
     public IActionExecutor CreateExecutor() => new Executor(this, markers);
+
+    public TimeSpan IconPollInterval => TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// The filter symbol (Assets/Icons/filter-badge.png, top right): lit while this button's filter is
+    /// active, grey (filter-badge-dim.png) otherwise.
+    /// </summary>
+    public Task<ActionIconSnapshot?> GetActionIconAsync(
+        IReadOnlyDictionary<string, object?> parameters, CancellationToken cancellationToken)
+    {
+        var own = FilterOf(parameters);
+        var active = own is not null && own.Equals(GroupOf(parameters).Current);
+        return Task.FromResult(IconLibrary.Snapshot("filter-badge", dimmed: !active));
+    }
+
+    public Task<ActionIconContent?> GetActionIconContentAsync(
+        IReadOnlyDictionary<string, object?> parameters, string version, CancellationToken cancellationToken) =>
+        Task.FromResult(IconLibrary.Content(version));
 
     private MarkerFilterGroup GroupOf<T>(IReadOnlyDictionary<string, T> parameters) =>
         filters.Group(MarkerGroupParameter.Read(parameters, "A")) ?? filters.A;
