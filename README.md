@@ -1,3 +1,5 @@
+<a href="https://macro-deck.app/store/de.christianalpen.reaperdeck"><img alt="Open in the Macro Deck Store" src="https://assets.macro-deck.app/branding/Open%20in%20the%20Macro%20Deck%20Store%20Badge%20Dark.png" height="56"></a>
+
 # ReaperDeck
 
 A [Macro Deck](https://macro-deck.app) plugin that controls [REAPER](https://www.reaper.fm) through
