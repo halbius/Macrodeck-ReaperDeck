@@ -68,3 +68,5 @@ ticked) and restart REAPER, so the new scripts are used.
 See [LICENSE](LICENSE).
 
 Developer documentation (German): [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
+
+[Support Further Development!](https://paypal.me/chralp/10)
